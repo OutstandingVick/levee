@@ -3,5 +3,8 @@
 !.env.example
 node_modules/
 coverage/
+cache/
+out/
+broadcast/
 examples/history.base.json
 .DS_Store
