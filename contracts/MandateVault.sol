@@ -93,6 +93,7 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
                 target: target,
                 selector: selector,
                 amount: amount,
+                existingPoolAllocation: deployedCapital[target][asset],
                 totalManagedAssets: totalDeposited[asset],
                 reserveBalanceAfter: reserveAfter,
                 projectedStressLossBps: projectedStressLossBps

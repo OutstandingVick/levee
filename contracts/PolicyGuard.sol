@@ -71,7 +71,7 @@ contract PolicyGuard is Owned {
         if (action.reserveBalanceAfter < current.reserveFloor) revert ReserveFloorBreached();
         if (
             action.totalManagedAssets == 0
-                || action.amount * MandateTypes.BPS
+                || (action.existingPoolAllocation + action.amount) * MandateTypes.BPS
                     > action.totalManagedAssets * current.maximumPoolAllocationBps
         ) revert PoolAllocationExceeded();
         if (action.projectedStressLossBps > current.maximumStressLossBps) {

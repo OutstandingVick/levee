@@ -18,6 +18,7 @@ library MandateTypes {
         address target;
         bytes4 selector;
         uint256 amount;
+        uint256 existingPoolAllocation;
         uint256 totalManagedAssets;
         uint256 reserveBalanceAfter;
         uint256 projectedStressLossBps;

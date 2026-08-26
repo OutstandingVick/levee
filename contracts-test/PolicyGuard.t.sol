@@ -34,6 +34,7 @@ contract PolicyGuardTest is TestBase {
             target: TARGET,
             selector: SELECTOR,
             amount: 3_500,
+            existingPoolAllocation: 0,
             totalManagedAssets: 7_000,
             reserveBalanceAfter: 3_000,
             projectedStressLossBps: 650
