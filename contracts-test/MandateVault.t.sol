@@ -68,6 +68,13 @@ contract MandateVaultTest is TestBase {
         internal
         returns (uint48 expiry, bytes memory signature)
     {
+        return signAssessmentWithKey(amount, riskBps, RISK_PRIVATE_KEY);
+    }
+
+    function signAssessmentWithKey(uint256 amount, uint256 riskBps, uint256 signingKey)
+        internal
+        returns (uint48 expiry, bytes memory signature)
+    {
         expiry = uint48(block.timestamp + 5 minutes);
         MandateTypes.Action memory action = MandateTypes.Action({
             asset: address(token),
@@ -80,7 +87,7 @@ contract MandateVaultTest is TestBase {
             projectedStressLossBps: riskBps
         });
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(RISK_PRIVATE_KEY, guard.assessmentDigest(action, expiry));
+            vm.sign(signingKey, guard.assessmentDigest(action, expiry));
         signature = abi.encodePacked(r, s, v);
     }
 
@@ -146,6 +153,53 @@ contract MandateVaultTest is TestBase {
             signature,
             abi.encodeCall(MockAdapter.deploy, (address(token), 100))
         );
+        vm.prank(AGENT);
+        vm.expectRevert(PolicyGuard.InvalidAssessmentSignature.selector);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            600,
+            expiry,
+            signature,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+    }
+
+    function testRejectsExpiredAssessment() public {
+        (uint48 expiry, bytes memory signature) = signAssessment(100, 600);
+        vm.warp(uint256(expiry) + 1);
+        vm.prank(AGENT);
+        vm.expectRevert(PolicyGuard.AssessmentMissingOrExpired.selector);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            600,
+            expiry,
+            signature,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+    }
+
+    function testRejectsAssessmentFromWrongSigner() public {
+        (uint48 expiry, bytes memory signature) = signAssessmentWithKey(100, 600, 0xB0B);
+        vm.prank(AGENT);
+        vm.expectRevert(PolicyGuard.InvalidAssessmentSignature.selector);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            600,
+            expiry,
+            signature,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+    }
+
+    function testMandateVersionInvalidatesPriorAssessment() public {
+        (uint48 expiry, bytes memory signature) = signAssessment(100, 600);
+        guard.setMandate(guard.currentMandate());
         vm.prank(AGENT);
         vm.expectRevert(PolicyGuard.InvalidAssessmentSignature.selector);
         vault.execute(
