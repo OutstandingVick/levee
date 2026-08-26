@@ -14,16 +14,29 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
 
     error ZeroAmount();
     error ReserveFloorBreached();
+    error NotAgent();
 
     PolicyGuard public immutable policyGuard;
+    address public agent;
     mapping(address token => uint256 amount) public totalDeposited;
 
     event Deposited(address indexed token, uint256 amount);
     event Withdrawn(address indexed token, uint256 amount, address indexed recipient);
+    event AgentChanged(address indexed previousAgent, address indexed newAgent);
 
     constructor(address initialOwner, PolicyGuard guard) Owned(initialOwner) {
         if (address(guard) == address(0)) revert ZeroAddress();
         policyGuard = guard;
+    }
+
+    modifier onlyAgent() {
+        if (msg.sender != agent) revert NotAgent();
+        _;
+    }
+
+    function setAgent(address newAgent) external onlyOwner {
+        emit AgentChanged(agent, newAgent);
+        agent = newAgent;
     }
 
     function deposit(address token, uint256 amount) external onlyOwner whenNotPaused nonReentrant {
