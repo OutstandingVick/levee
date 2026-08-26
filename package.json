@@ -9,6 +9,7 @@
     "replay": "node examples/replay.js",
     "import:uniswap": "node examples/import-uniswap.js",
     "verify:deployment": "node scripts/verify-deployment.js",
+    "preflight": "node scripts/preflight.js",
     "agent:demo": "node agent/demo.js",
     "test:all": "npm test && forge test && npm --prefix dashboard test",
     "test": "node --test test/*.test.js"
