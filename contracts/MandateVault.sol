@@ -53,6 +53,14 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         agent = newAgent;
     }
 
+    function setPaused(bool value) external onlyOwner {
+        _setPaused(value);
+        if (value && agent != address(0)) {
+            emit AgentChanged(agent, address(0));
+            agent = address(0);
+        }
+    }
+
     function deposit(address token, uint256 amount) external onlyOwner whenNotPaused nonReentrant {
         if (amount == 0) revert ZeroAmount();
         token.safeTransferFrom(msg.sender, address(this), amount);
