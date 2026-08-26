@@ -253,4 +253,17 @@ contract MandateVaultTest is TestBase {
         assertEq(vault.totalDeposited(address(feeToken)), 900);
         assertEq(feeToken.balanceOf(address(vault)), 900);
     }
+
+    function testFuzzOwnerCannotWithdrawThroughReserve(uint256 rawAmount) public {
+        uint256 amount = 7_001 + (rawAmount % 3_000);
+        vm.expectRevert();
+        vault.withdraw(address(token), amount, address(this));
+        assertEq(token.balanceOf(address(vault)), 10_000);
+    }
+
+    function invariantCustodyAccountingNeverExceedsBalancePlusDeployment() public view {
+        uint256 accounted = token.balanceOf(address(vault))
+            + vault.deployedCapital(address(adapter), address(token));
+        assertTrue(accounted >= vault.totalDeposited(address(token)));
+    }
 }

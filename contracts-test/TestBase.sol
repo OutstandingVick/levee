@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 interface Vm {
     function prank(address sender) external;
     function expectRevert(bytes4 selector) external;
+    function expectRevert() external;
     function warp(uint256 timestamp) external;
     function addr(uint256 privateKey) external returns (address);
     function sign(uint256 privateKey, bytes32 digest)

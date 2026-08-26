@@ -72,4 +72,28 @@ contract PolicyGuardTest is TestBase {
         vm.expectRevert(PolicyGuard.SelectorNotApproved.selector);
         guard.validateAction(action);
     }
+
+    function testFuzzAcceptsAllocationWithinMandate(uint256 rawAmount, uint256 rawRisk)
+        public
+        view
+    {
+        MandateTypes.Action memory action = validAction();
+        action.amount = 1 + (rawAmount % 3_500e18);
+        action.projectedStressLossBps = rawRisk % 701;
+        guard.validateAction(action);
+    }
+
+    function testFuzzRejectsAnyStressAboveMandate(uint256 rawRisk) public {
+        MandateTypes.Action memory action = validAction();
+        action.projectedStressLossBps = 701 + (rawRisk % (type(uint32).max - 701));
+        vm.expectRevert(PolicyGuard.StressLossExceeded.selector);
+        guard.validateAction(action);
+    }
+
+    function testFuzzRejectsAnyReserveBelowFloor(uint256 rawReserve) public {
+        MandateTypes.Action memory action = validAction();
+        action.reserveBalanceAfter = rawReserve % 3_000e18;
+        vm.expectRevert(PolicyGuard.ReserveFloorBreached.selector);
+        guard.validateAction(action);
+    }
 }
