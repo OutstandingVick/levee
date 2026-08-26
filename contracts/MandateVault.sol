@@ -71,9 +71,12 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
 
     function deposit(address token, uint256 amount) external onlyOwner whenNotPaused nonReentrant {
         if (amount == 0) revert ZeroAmount();
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
         token.safeTransferFrom(msg.sender, address(this), amount);
-        totalDeposited[token] += amount;
-        emit Deposited(token, amount);
+        uint256 received = IERC20(token).balanceOf(address(this)) - balanceBefore;
+        if (received == 0) revert ZeroAmount();
+        totalDeposited[token] += received;
+        emit Deposited(token, received);
     }
 
     function execute(

@@ -10,6 +10,7 @@ import {TestBase} from "./TestBase.sol";
 import {MockAdapter} from "./mocks/MockAdapter.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockAggregator} from "./mocks/MockAggregator.sol";
+import {MockFeeToken} from "./mocks/MockFeeToken.sol";
 
 contract MandateVaultTest is TestBase {
     address internal constant AGENT = address(0xA6E17);
@@ -240,5 +241,16 @@ contract MandateVaultTest is TestBase {
         vault.emergencyWithdraw(address(token), address(this));
         assertEq(token.balanceOf(address(vault)), 0);
         assertEq(token.balanceOf(address(this)), 10_000);
+    }
+
+    function testDepositAccountsForFeeOnTransferAmount() public {
+        MockFeeToken feeToken = new MockFeeToken(1_000);
+        MockAggregator feed = new MockAggregator(8, 1e8);
+        oracle.setFeed(address(feeToken), IAggregatorV3(address(feed)), 0, 1 days);
+        feeToken.mint(address(this), 1_000);
+        feeToken.approve(address(vault), 1_000);
+        vault.deposit(address(feeToken), 1_000);
+        assertEq(vault.totalDeposited(address(feeToken)), 900);
+        assertEq(feeToken.balanceOf(address(vault)), 900);
     }
 }
