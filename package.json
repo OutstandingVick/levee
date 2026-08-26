@@ -1,0 +1,16 @@
+{
+  "name": "levee",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mandate-driven LP allocation and risk simulation engine",
+  "scripts": {
+    "demo": "node examples/demo.js",
+    "replay": "node examples/replay.js",
+    "import:uniswap": "node examples/import-uniswap.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

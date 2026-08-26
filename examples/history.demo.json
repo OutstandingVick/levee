@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "source": "synthetic-demo-fixture",
+    "network": "Base",
+    "interval": "1 day",
+    "warning": "Not verified market history; designed to exercise replay behavior."
+  },
+  "snapshots": [
+    {"timestamp":"2026-08-18T00:00:00Z","pools":[
+      {"id":"uni-005","protocol":"Uniswap v3","pair":"USDC/WETH 0.05%","assets":["USDC","WETH"],"spotPriceUsd":4300,"grossApyPercent":18,"annualGasCostUsd":35,"tvlUsd":18000000,"ageDays":500,"riskyAssetWeight":1},
+      {"id":"uni-030","protocol":"Uniswap v3","pair":"USDC/WETH 0.30%","assets":["USDC","WETH"],"spotPriceUsd":4300,"grossApyPercent":15,"annualGasCostUsd":35,"tvlUsd":25000000,"ageDays":600,"riskyAssetWeight":0.75},
+      {"id":"uni-boost","protocol":"Uniswap v3","pair":"USDC/WETH BOOSTED","assets":["USDC","WETH"],"spotPriceUsd":4300,"grossApyPercent":28,"annualGasCostUsd":55,"tvlUsd":1400000,"ageDays":31,"riskyAssetWeight":1.6}
+    ]},
+    {"timestamp":"2026-08-19T00:00:00Z","pools":[
+      {"id":"uni-005","protocol":"Uniswap v3","pair":"USDC/WETH 0.05%","assets":["USDC","WETH"],"spotPriceUsd":4320,"grossApyPercent":19,"annualGasCostUsd":35,"tvlUsd":18100000,"ageDays":501,"riskyAssetWeight":1},
+      {"id":"uni-030","protocol":"Uniswap v3","pair":"USDC/WETH 0.30%","assets":["USDC","WETH"],"spotPriceUsd":4310,"grossApyPercent":16,"annualGasCostUsd":35,"tvlUsd":25100000,"ageDays":601,"riskyAssetWeight":0.75},
+      {"id":"uni-boost","protocol":"Uniswap v3","pair":"USDC/WETH BOOSTED","assets":["USDC","WETH"],"spotPriceUsd":4500,"grossApyPercent":35,"annualGasCostUsd":55,"tvlUsd":1200000,"ageDays":32,"riskyAssetWeight":1.6}
+    ]},
+    {"timestamp":"2026-08-20T00:00:00Z","pools":[
+      {"id":"uni-005","protocol":"Uniswap v3","pair":"USDC/WETH 0.05%","assets":["USDC","WETH"],"spotPriceUsd":4290,"grossApyPercent":19,"annualGasCostUsd":35,"tvlUsd":17900000,"ageDays":502,"riskyAssetWeight":1},
+      {"id":"uni-030","protocol":"Uniswap v3","pair":"USDC/WETH 0.30%","assets":["USDC","WETH"],"spotPriceUsd":4305,"grossApyPercent":16,"annualGasCostUsd":35,"tvlUsd":25200000,"ageDays":602,"riskyAssetWeight":0.75},
+      {"id":"uni-boost","protocol":"Uniswap v3","pair":"USDC/WETH BOOSTED","assets":["USDC","WETH"],"spotPriceUsd":3900,"grossApyPercent":61,"annualGasCostUsd":55,"tvlUsd":650000,"ageDays":33,"riskyAssetWeight":1.6}
+    ]},
+    {"timestamp":"2026-08-21T00:00:00Z","pools":[
+      {"id":"uni-005","protocol":"Uniswap v3","pair":"USDC/WETH 0.05%","assets":["USDC","WETH"],"spotPriceUsd":4310,"grossApyPercent":20,"annualGasCostUsd":35,"tvlUsd":18200000,"ageDays":503,"riskyAssetWeight":1},
+      {"id":"uni-030","protocol":"Uniswap v3","pair":"USDC/WETH 0.30%","assets":["USDC","WETH"],"spotPriceUsd":4315,"grossApyPercent":17,"annualGasCostUsd":35,"tvlUsd":25400000,"ageDays":603,"riskyAssetWeight":0.75},
+      {"id":"uni-boost","protocol":"Uniswap v3","pair":"USDC/WETH BOOSTED","assets":["USDC","WETH"],"spotPriceUsd":4700,"grossApyPercent":72,"annualGasCostUsd":55,"tvlUsd":590000,"ageDays":34,"riskyAssetWeight":1.6}
+    ]},
+    {"timestamp":"2026-08-22T00:00:00Z","pools":[
+      {"id":"uni-005","protocol":"Uniswap v3","pair":"USDC/WETH 0.05%","assets":["USDC","WETH"],"spotPriceUsd":4330,"grossApyPercent":18,"annualGasCostUsd":35,"tvlUsd":18300000,"ageDays":504,"riskyAssetWeight":1},
+      {"id":"uni-030","protocol":"Uniswap v3","pair":"USDC/WETH 0.30%","assets":["USDC","WETH"],"spotPriceUsd":4320,"grossApyPercent":18,"annualGasCostUsd":35,"tvlUsd":25500000,"ageDays":604,"riskyAssetWeight":0.75},
+      {"id":"uni-boost","protocol":"Uniswap v3","pair":"USDC/WETH BOOSTED","assets":["USDC","WETH"],"spotPriceUsd":3750,"grossApyPercent":80,"annualGasCostUsd":55,"tvlUsd":500000,"ageDays":35,"riskyAssetWeight":1.6}
+    ]}
+  ]
+}

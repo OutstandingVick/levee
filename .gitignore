@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+node_modules/
+coverage/
+examples/history.base.json
+.DS_Store
