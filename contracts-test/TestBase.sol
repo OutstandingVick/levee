@@ -10,6 +10,12 @@ interface Vm {
     function sign(uint256 privateKey, bytes32 digest)
         external
         returns (uint8 v, bytes32 r, bytes32 s);
+    function envOr(string calldata name, string calldata defaultValue)
+        external
+        view
+        returns (string memory);
+    function envOr(string calldata name, address defaultValue) external view returns (address);
+    function createSelectFork(string calldata urlOrAlias) external returns (uint256);
 }
 
 abstract contract TestBase {

@@ -1,0 +1,13 @@
+{
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "deployedAt": null,
+  "commit": null,
+  "contracts": {
+    "valuationOracle": null,
+    "policyGuard": null,
+    "positionRegistry": null,
+    "mandateVault": null,
+    "uniswapV3Adapter": null
+  }
+}

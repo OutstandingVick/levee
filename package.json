@@ -8,6 +8,7 @@
     "demo": "node examples/demo.js",
     "replay": "node examples/replay.js",
     "import:uniswap": "node examples/import-uniswap.js",
+    "verify:deployment": "node scripts/verify-deployment.js",
     "test": "node --test"
   },
   "engines": {
