@@ -11,3 +11,6 @@ via_ir = true
 [fmt]
 line_length = 100
 tab_width = 4
+
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
