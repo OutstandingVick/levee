@@ -19,6 +19,7 @@ library MandateTypes {
         bytes4 selector;
         uint256 amount;
         uint256 totalManagedAssets;
+        uint256 reserveBalanceAfter;
         uint256 projectedStressLossBps;
     }
 }

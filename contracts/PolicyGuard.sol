@@ -6,6 +6,13 @@ import {MandateTypes} from "./types/MandateTypes.sol";
 
 contract PolicyGuard is Owned {
     error InvalidMandate();
+    error MandateExpired();
+    error AssetNotApproved();
+    error TargetNotApproved();
+    error SelectorNotApproved();
+    error ReserveFloorBreached();
+    error PoolAllocationExceeded();
+    error StressLossExceeded();
 
     MandateTypes.Mandate public mandate;
     uint64 public mandateVersion;
@@ -47,6 +54,25 @@ contract PolicyGuard is Owned {
         if (target == address(0)) revert ZeroAddress();
         approvedSelectors[target][selector] = approved;
         emit SelectorApprovalChanged(target, selector, approved);
+    }
+
+    function validateAction(MandateTypes.Action calldata action) external view {
+        MandateTypes.Mandate memory current = mandate;
+        if (current.validUntil != 0 && block.timestamp > current.validUntil) {
+            revert MandateExpired();
+        }
+        if (!approvedAssets[action.asset]) revert AssetNotApproved();
+        if (!approvedTargets[action.target]) revert TargetNotApproved();
+        if (!approvedSelectors[action.target][action.selector]) revert SelectorNotApproved();
+        if (action.reserveBalanceAfter < current.reserveFloor) revert ReserveFloorBreached();
+        if (
+            action.totalManagedAssets == 0
+                || action.amount * MandateTypes.BPS
+                    > action.totalManagedAssets * current.maximumPoolAllocationBps
+        ) revert PoolAllocationExceeded();
+        if (action.projectedStressLossBps > current.maximumStressLossBps) {
+            revert StressLossExceeded();
+        }
     }
 
     function _setMandate(MandateTypes.Mandate memory nextMandate) internal {
