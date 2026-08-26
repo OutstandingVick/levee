@@ -16,7 +16,7 @@ contract PolicyGuardTest is TestBase {
             address(this),
             MandateTypes.Mandate({
                 reserveToken: TOKEN,
-                reserveFloor: 3_000,
+                reserveFloor: 3_000e18,
                 maximumStressLossBps: 700,
                 maximumPoolAllocationBps: 5_000,
                 rebalanceCooldown: 0,
@@ -33,10 +33,10 @@ contract PolicyGuardTest is TestBase {
             asset: TOKEN,
             target: TARGET,
             selector: SELECTOR,
-            amount: 3_500,
+            amount: 3_500e18,
             existingPoolAllocation: 0,
-            totalManagedAssets: 7_000,
-            reserveBalanceAfter: 3_000,
+            totalManagedAssets: 7_000e18,
+            reserveBalanceAfter: 3_000e18,
             projectedStressLossBps: 650
         });
     }
@@ -47,14 +47,14 @@ contract PolicyGuardTest is TestBase {
 
     function testRejectsReserveFloorBreach() public {
         MandateTypes.Action memory action = validAction();
-        action.reserveBalanceAfter = 2_999;
+        action.reserveBalanceAfter = 2_999e18;
         vm.expectRevert(PolicyGuard.ReserveFloorBreached.selector);
         guard.validateAction(action);
     }
 
     function testRejectsConcentrationBreach() public {
         MandateTypes.Action memory action = validAction();
-        action.amount = 3_501;
+        action.amount = 3_501e18;
         vm.expectRevert(PolicyGuard.PoolAllocationExceeded.selector);
         guard.validateAction(action);
     }

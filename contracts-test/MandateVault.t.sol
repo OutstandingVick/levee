@@ -4,9 +4,12 @@ pragma solidity ^0.8.30;
 import {MandateVault} from "../contracts/MandateVault.sol";
 import {PolicyGuard} from "../contracts/PolicyGuard.sol";
 import {MandateTypes} from "../contracts/types/MandateTypes.sol";
+import {ValuationOracle} from "../contracts/ValuationOracle.sol";
+import {IAggregatorV3} from "../contracts/interfaces/IAggregatorV3.sol";
 import {TestBase} from "./TestBase.sol";
 import {MockAdapter} from "./mocks/MockAdapter.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockAggregator} from "./mocks/MockAggregator.sol";
 
 contract MandateVaultTest is TestBase {
     address internal constant AGENT = address(0xA6E17);
@@ -15,22 +18,26 @@ contract MandateVaultTest is TestBase {
     MockAdapter internal adapter;
     PolicyGuard internal guard;
     MandateVault internal vault;
+    ValuationOracle internal oracle;
 
     function setUp() public {
         token = new MockERC20("USD Coin", "USDC");
         adapter = new MockAdapter();
+        oracle = new ValuationOracle(address(this));
+        MockAggregator feed = new MockAggregator(8, 1e8);
+        oracle.setFeed(address(token), IAggregatorV3(address(feed)), 0, 1 days);
         guard = new PolicyGuard(
             address(this),
             MandateTypes.Mandate({
                 reserveToken: address(token),
-                reserveFloor: 3_000,
+                reserveFloor: 3_000e18,
                 maximumStressLossBps: 700,
                 maximumPoolAllocationBps: 5_000,
                 rebalanceCooldown: 0,
                 validUntil: 0
             })
         );
-        vault = new MandateVault(address(this), guard);
+        vault = new MandateVault(address(this), guard, oracle);
         guard.setExecutorApproval(address(vault), true);
         guard.setRiskAttestor(address(this));
         guard.setAssetApproval(address(token), true);
@@ -60,10 +67,11 @@ contract MandateVaultTest is TestBase {
                 asset: address(token),
                 target: address(adapter),
                 selector: MockAdapter.deploy.selector,
-                amount: amount,
-                existingPoolAllocation: vault.deployedCapital(address(adapter), address(token)),
-                totalManagedAssets: vault.totalDeposited(address(token)),
-                reserveBalanceAfter: token.balanceOf(address(vault)) - amount,
+                amount: amount * 1e18,
+                existingPoolAllocation: vault.deployedCapital(address(adapter), address(token))
+                    * 1e18,
+                totalManagedAssets: vault.totalDeposited(address(token)) * 1e18,
+                reserveBalanceAfter: (token.balanceOf(address(vault)) - amount) * 1e18,
                 projectedStressLossBps: riskBps
             }),
             uint48(block.timestamp + 5 minutes)
