@@ -31,6 +31,8 @@ contract MandateVaultTest is TestBase {
             })
         );
         vault = new MandateVault(address(this), guard);
+        guard.setExecutorApproval(address(vault), true);
+        guard.setRiskAttestor(address(this));
         guard.setAssetApproval(address(token), true);
         guard.setTargetApproval(address(adapter), true);
         guard.setSelectorApproval(address(adapter), MockAdapter.deploy.selector, true);
@@ -41,6 +43,7 @@ contract MandateVaultTest is TestBase {
     }
 
     function executeAsAgent(uint256 amount) internal {
+        approveAssessment(amount, 600);
         vm.prank(AGENT);
         vault.execute(
             address(token),
@@ -48,6 +51,22 @@ contract MandateVaultTest is TestBase {
             amount,
             600,
             abi.encodeCall(MockAdapter.deploy, (address(token), amount))
+        );
+    }
+
+    function approveAssessment(uint256 amount, uint256 riskBps) internal {
+        guard.approveAssessment(
+            MandateTypes.Action({
+                asset: address(token),
+                target: address(adapter),
+                selector: MockAdapter.deploy.selector,
+                amount: amount,
+                existingPoolAllocation: vault.deployedCapital(address(adapter), address(token)),
+                totalManagedAssets: vault.totalDeposited(address(token)),
+                reserveBalanceAfter: token.balanceOf(address(vault)) - amount,
+                projectedStressLossBps: riskBps
+            }),
+            uint48(block.timestamp + 5 minutes)
         );
     }
 
@@ -83,8 +102,42 @@ contract MandateVaultTest is TestBase {
         );
     }
 
+    function testRejectsAgentSuppliedRiskWithoutAttestation() public {
+        vm.prank(AGENT);
+        vm.expectRevert(PolicyGuard.AssessmentMissingOrExpired.selector);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            0,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+    }
+
+    function testAssessmentCannotBeReplayed() public {
+        approveAssessment(100, 600);
+        vm.prank(AGENT);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            600,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+        vm.prank(AGENT);
+        vm.expectRevert(PolicyGuard.AssessmentMissingOrExpired.selector);
+        vault.execute(
+            address(token),
+            address(adapter),
+            100,
+            600,
+            abi.encodeCall(MockAdapter.deploy, (address(token), 100))
+        );
+    }
+
     function testRejectsCumulativePoolConcentration() public {
         executeAsAgent(3_500);
+        approveAssessment(1_501, 600);
         vm.prank(AGENT);
         vm.expectRevert(PolicyGuard.PoolAllocationExceeded.selector);
         vault.execute(

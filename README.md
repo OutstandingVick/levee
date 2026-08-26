@@ -66,3 +66,23 @@ volatility, concentrated-liquidity stress, decomposed returns, fail-closed data
 quality, historical replay metrics, decision provenance, and randomized safety
 tests. Production calibration remains ongoing research rather than a software
 completeness claim; no model output should be treated as financial advice.
+
+## Phase 2 contracts
+
+The in-progress Base/EVM safety layer lives in `contracts/`:
+
+- `PolicyGuard` versions mandates and enforces asset, target, selector, reserve,
+  concentration, expiry, cooldown, and projected-stress constraints.
+- `MandateVault` holds tokens, delegates narrowly to one revocable agent, resets
+  protocol allowances after each call, and supports pause plus owner recovery.
+- Risk assessments are approved by a distinct attestor, bound to the chain,
+  guard, mandate version, and full action, then consumed exactly once.
+
+Run both phases' tests with:
+
+```bash
+forge test
+npm test
+```
+
+These contracts are unaudited and must not hold production funds.

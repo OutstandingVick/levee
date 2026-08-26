@@ -87,18 +87,18 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         uint256 reserveAfter = IERC20(current.reserveToken).balanceOf(address(this));
         if (asset == current.reserveToken) reserveAfter = balanceBefore - amount;
 
-        policyGuard.validateAction(
-            MandateTypes.Action({
-                asset: asset,
-                target: target,
-                selector: selector,
-                amount: amount,
-                existingPoolAllocation: deployedCapital[target][asset],
-                totalManagedAssets: totalDeposited[asset],
-                reserveBalanceAfter: reserveAfter,
-                projectedStressLossBps: projectedStressLossBps
-            })
-        );
+        MandateTypes.Action memory action = MandateTypes.Action({
+            asset: asset,
+            target: target,
+            selector: selector,
+            amount: amount,
+            existingPoolAllocation: deployedCapital[target][asset],
+            totalManagedAssets: totalDeposited[asset],
+            reserveBalanceAfter: reserveAfter,
+            projectedStressLossBps: projectedStressLossBps
+        });
+        policyGuard.validateAction(action);
+        policyGuard.consumeAssessment(action);
 
         asset.forceApprove(target, amount);
         (bool success, bytes memory returnData) = target.call(data);
