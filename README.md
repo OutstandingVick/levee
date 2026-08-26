@@ -86,3 +86,18 @@ npm test
 ```
 
 These contracts are unaudited and must not hold production funds.
+
+## End-to-end MVP
+
+Levee now includes the complete hackathon/testnet path:
+
+1. Import and validate Base pool observations.
+2. Rank pools and reject mandate violations.
+3. Simulate the selected action.
+4. Obtain a state-bound EIP-712 risk attestation.
+5. Execute through `MandateVault` and `PolicyGuard`.
+6. Open/close an allowlisted Uniswap v3 NFT position.
+7. Monitor reserve health and decision provenance in `dashboard/`.
+
+See `docs/THREAT_MODEL.md`, `docs/OPERATIONS.md`, and `.env.example` before any
+testnet deployment. Run `npm run test:all` for the complete verification suite.

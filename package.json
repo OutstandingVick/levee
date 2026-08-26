@@ -10,7 +10,8 @@
     "import:uniswap": "node examples/import-uniswap.js",
     "verify:deployment": "node scripts/verify-deployment.js",
     "agent:demo": "node agent/demo.js",
-    "test": "node --test"
+    "test:all": "npm test && forge test && npm --prefix dashboard test",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=20"
