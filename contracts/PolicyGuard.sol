@@ -35,6 +35,10 @@ contract PolicyGuard is Owned {
         _setMandate(nextMandate);
     }
 
+    function currentMandate() external view returns (MandateTypes.Mandate memory) {
+        return mandate;
+    }
+
     function setAssetApproval(address asset, bool approved) external onlyOwner {
         if (asset == address(0)) revert ZeroAddress();
         approvedAssets[asset] = approved;
