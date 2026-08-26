@@ -18,10 +18,13 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
     error InvalidCallData();
     error ExternalCallFailed(bytes reason);
     error OverspentToken();
+    error RebalanceCooldownActive();
 
     PolicyGuard public immutable policyGuard;
     address public agent;
     mapping(address token => uint256 amount) public totalDeposited;
+    mapping(address target => mapping(address asset => uint256 amount)) public deployedCapital;
+    uint48 public lastExecutionAt;
 
     event Deposited(address indexed token, uint256 amount);
     event Withdrawn(address indexed token, uint256 amount, address indexed recipient);
@@ -68,6 +71,9 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         if (data.length < 4) revert InvalidCallData();
         bytes4 selector = bytes4(data[:4]);
         MandateTypes.Mandate memory current = policyGuard.currentMandate();
+        if (block.timestamp < uint256(lastExecutionAt) + current.rebalanceCooldown) {
+            revert RebalanceCooldownActive();
+        }
         uint256 balanceBefore = IERC20(asset).balanceOf(address(this));
         uint256 reserveAfter = IERC20(current.reserveToken).balanceOf(address(this));
         if (asset == current.reserveToken) reserveAfter = balanceBefore - amount;
@@ -92,6 +98,9 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         if (balanceBefore > balanceAfter && balanceBefore - balanceAfter > amount) {
             revert OverspentToken();
         }
+        uint256 spent = balanceBefore > balanceAfter ? balanceBefore - balanceAfter : 0;
+        deployedCapital[target][asset] += spent;
+        lastExecutionAt = uint48(block.timestamp);
         emit ActionExecuted(msg.sender, target, asset, selector, amount, projectedStressLossBps);
         return returnData;
     }
