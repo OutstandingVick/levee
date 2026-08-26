@@ -14,6 +14,7 @@ import {MockAggregator} from "./mocks/MockAggregator.sol";
 contract MandateVaultTest is TestBase {
     address internal constant AGENT = address(0xA6E17);
     address internal constant ATTACKER = address(0xBAD);
+    uint256 internal constant RISK_PRIVATE_KEY = 0xA11CE;
     MockERC20 internal token;
     MockAdapter internal adapter;
     PolicyGuard internal guard;
@@ -39,7 +40,7 @@ contract MandateVaultTest is TestBase {
         );
         vault = new MandateVault(address(this), guard, oracle);
         guard.setExecutorApproval(address(vault), true);
-        guard.setRiskAttestor(address(this));
+        guard.setRiskAttestor(vm.addr(RISK_PRIVATE_KEY));
         guard.setAssetApproval(address(token), true);
         guard.setTargetApproval(address(adapter), true);
         guard.setSelectorApproval(address(adapter), MockAdapter.deploy.selector, true);
@@ -50,32 +51,37 @@ contract MandateVaultTest is TestBase {
     }
 
     function executeAsAgent(uint256 amount) internal {
-        approveAssessment(amount, 600);
+        (uint48 expiry, bytes memory signature) = signAssessment(amount, 600);
         vm.prank(AGENT);
         vault.execute(
             address(token),
             address(adapter),
             amount,
             600,
+            expiry,
+            signature,
             abi.encodeCall(MockAdapter.deploy, (address(token), amount))
         );
     }
 
-    function approveAssessment(uint256 amount, uint256 riskBps) internal {
-        guard.approveAssessment(
-            MandateTypes.Action({
-                asset: address(token),
-                target: address(adapter),
-                selector: MockAdapter.deploy.selector,
-                amount: amount * 1e18,
-                existingPoolAllocation: vault.deployedCapital(address(adapter), address(token))
-                    * 1e18,
-                totalManagedAssets: vault.totalDeposited(address(token)) * 1e18,
-                reserveBalanceAfter: (token.balanceOf(address(vault)) - amount) * 1e18,
-                projectedStressLossBps: riskBps
-            }),
-            uint48(block.timestamp + 5 minutes)
-        );
+    function signAssessment(uint256 amount, uint256 riskBps)
+        internal
+        returns (uint48 expiry, bytes memory signature)
+    {
+        expiry = uint48(block.timestamp + 5 minutes);
+        MandateTypes.Action memory action = MandateTypes.Action({
+            asset: address(token),
+            target: address(adapter),
+            selector: MockAdapter.deploy.selector,
+            amount: amount * 1e18,
+            existingPoolAllocation: vault.deployedCapital(address(adapter), address(token)) * 1e18,
+            totalManagedAssets: vault.totalDeposited(address(token)) * 1e18,
+            reserveBalanceAfter: (token.balanceOf(address(vault)) - amount) * 1e18,
+            projectedStressLossBps: riskBps
+        });
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(RISK_PRIVATE_KEY, guard.assessmentDigest(action, expiry));
+        signature = abi.encodePacked(r, s, v);
     }
 
     function testAgentExecutesCompliantAllocationAndAllowanceResets() public {
@@ -94,6 +100,8 @@ contract MandateVaultTest is TestBase {
             address(adapter),
             1,
             0,
+            0,
+            bytes(""),
             abi.encodeCall(MockAdapter.deploy, (address(token), 1))
         );
     }
@@ -106,46 +114,54 @@ contract MandateVaultTest is TestBase {
             address(adapter),
             100,
             0,
+            0,
+            bytes(""),
             abi.encodeCall(MockAdapter.steal, (address(token), 100))
         );
     }
 
     function testRejectsAgentSuppliedRiskWithoutAttestation() public {
         vm.prank(AGENT);
-        vm.expectRevert(PolicyGuard.AssessmentMissingOrExpired.selector);
+        vm.expectRevert(PolicyGuard.InvalidAssessmentSignature.selector);
         vault.execute(
             address(token),
             address(adapter),
             100,
             0,
+            uint48(block.timestamp + 5 minutes),
+            bytes(""),
             abi.encodeCall(MockAdapter.deploy, (address(token), 100))
         );
     }
 
     function testAssessmentCannotBeReplayed() public {
-        approveAssessment(100, 600);
+        (uint48 expiry, bytes memory signature) = signAssessment(100, 600);
         vm.prank(AGENT);
         vault.execute(
             address(token),
             address(adapter),
             100,
             600,
+            expiry,
+            signature,
             abi.encodeCall(MockAdapter.deploy, (address(token), 100))
         );
         vm.prank(AGENT);
-        vm.expectRevert(PolicyGuard.AssessmentMissingOrExpired.selector);
+        vm.expectRevert(PolicyGuard.InvalidAssessmentSignature.selector);
         vault.execute(
             address(token),
             address(adapter),
             100,
             600,
+            expiry,
+            signature,
             abi.encodeCall(MockAdapter.deploy, (address(token), 100))
         );
     }
 
     function testRejectsCumulativePoolConcentration() public {
         executeAsAgent(3_500);
-        approveAssessment(1_501, 600);
+        (uint48 expiry, bytes memory signature) = signAssessment(1_501, 600);
         vm.prank(AGENT);
         vm.expectRevert(PolicyGuard.PoolAllocationExceeded.selector);
         vault.execute(
@@ -153,6 +169,8 @@ contract MandateVaultTest is TestBase {
             address(adapter),
             1_501,
             600,
+            expiry,
+            signature,
             abi.encodeCall(MockAdapter.deploy, (address(token), 1_501))
         );
     }

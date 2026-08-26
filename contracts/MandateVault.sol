@@ -81,6 +81,8 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         address target,
         uint256 amount,
         uint256 projectedStressLossBps,
+        uint48 assessmentExpiry,
+        bytes calldata assessmentSignature,
         bytes calldata data
     ) external onlyAgent whenNotPaused nonReentrant returns (bytes memory result) {
         if (amount == 0) revert ZeroAmount();
@@ -109,7 +111,7 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
             projectedStressLossBps: projectedStressLossBps
         });
         policyGuard.validateAction(action);
-        policyGuard.consumeAssessment(action);
+        policyGuard.consumeAssessment(action, assessmentExpiry, assessmentSignature);
 
         asset.forceApprove(target, amount);
         (bool success, bytes memory returnData) = target.call(data);

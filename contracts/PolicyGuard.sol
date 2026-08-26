@@ -16,6 +16,7 @@ contract PolicyGuard is Owned {
     error NotRiskAttestor();
     error NotExecutor();
     error AssessmentMissingOrExpired();
+    error InvalidAssessmentSignature();
 
     MandateTypes.Mandate public mandate;
     uint64 public mandateVersion;
@@ -23,7 +24,7 @@ contract PolicyGuard is Owned {
     mapping(address target => bool approved) public approvedTargets;
     mapping(address target => mapping(bytes4 selector => bool approved)) public approvedSelectors;
     mapping(address executor => bool approved) public approvedExecutors;
-    mapping(bytes32 actionHash => uint48 expiresAt) public assessments;
+    mapping(bytes32 digest => bool consumed) public consumedAssessments;
     address public riskAttestor;
 
     event MandateUpdated(uint64 indexed version, MandateTypes.Mandate mandate);
@@ -32,8 +33,16 @@ contract PolicyGuard is Owned {
     event SelectorApprovalChanged(address indexed target, bytes4 indexed selector, bool approved);
     event ExecutorApprovalChanged(address indexed executor, bool approved);
     event RiskAttestorChanged(address indexed previousAttestor, address indexed newAttestor);
-    event AssessmentApproved(bytes32 indexed actionHash, uint48 expiresAt);
-    event AssessmentConsumed(bytes32 indexed actionHash);
+    event AssessmentConsumed(bytes32 indexed digest);
+
+    bytes32 public constant ACTION_TYPEHASH = keccak256(
+        "RiskAssessment(address asset,address target,bytes4 selector,uint256 amount,uint256 existingPoolAllocation,uint256 totalManagedAssets,uint256 reserveBalanceAfter,uint256 projectedStressLossBps,uint64 mandateVersion,uint48 expiresAt)"
+    );
+    bytes32 private constant DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
+    bytes32 private constant NAME_HASH = keccak256("Levee PolicyGuard");
+    bytes32 private constant VERSION_HASH = keccak256("1");
 
     constructor(address initialOwner, MandateTypes.Mandate memory initialMandate)
         Owned(initialOwner)
@@ -66,24 +75,65 @@ contract PolicyGuard is Owned {
         riskAttestor = nextAttestor;
     }
 
-    function actionHash(MandateTypes.Action memory action) public view returns (bytes32) {
-        return keccak256(abi.encode(block.chainid, address(this), mandateVersion, action));
+    function assessmentDigest(MandateTypes.Action memory action, uint48 expiresAt)
+        public
+        view
+        returns (bytes32)
+    {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this))
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ACTION_TYPEHASH,
+                action.asset,
+                action.target,
+                action.selector,
+                action.amount,
+                action.existingPoolAllocation,
+                action.totalManagedAssets,
+                action.reserveBalanceAfter,
+                action.projectedStressLossBps,
+                mandateVersion,
+                expiresAt
+            )
+        );
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
     }
 
-    function approveAssessment(MandateTypes.Action calldata action, uint48 expiresAt) external {
-        if (msg.sender != riskAttestor) revert NotRiskAttestor();
-        if (expiresAt <= block.timestamp) revert AssessmentMissingOrExpired();
-        bytes32 digest = actionHash(action);
-        assessments[digest] = expiresAt;
-        emit AssessmentApproved(digest, expiresAt);
-    }
-
-    function consumeAssessment(MandateTypes.Action calldata action) external {
+    function consumeAssessment(
+        MandateTypes.Action calldata action,
+        uint48 expiresAt,
+        bytes calldata signature
+    ) external {
         if (!approvedExecutors[msg.sender]) revert NotExecutor();
-        bytes32 digest = actionHash(action);
-        if (assessments[digest] < block.timestamp) revert AssessmentMissingOrExpired();
-        delete assessments[digest];
+        if (expiresAt < block.timestamp) revert AssessmentMissingOrExpired();
+        bytes32 digest = assessmentDigest(action, expiresAt);
+        if (consumedAssessments[digest]) revert AssessmentMissingOrExpired();
+        if (_recover(digest, signature) != riskAttestor) revert InvalidAssessmentSignature();
+        consumedAssessments[digest] = true;
         emit AssessmentConsumed(digest);
+    }
+
+    function _recover(bytes32 digest, bytes calldata signature)
+        internal
+        pure
+        returns (address signer)
+    {
+        if (signature.length != 65) revert InvalidAssessmentSignature();
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 32))
+            v := byte(0, calldataload(add(signature.offset, 64)))
+        }
+        if (uint256(s) > 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0) {
+            revert InvalidAssessmentSignature();
+        }
+        if (v != 27 && v != 28) revert InvalidAssessmentSignature();
+        signer = ecrecover(digest, v, r, s);
     }
 
     function setTargetApproval(address target, bool approved) external onlyOwner {
