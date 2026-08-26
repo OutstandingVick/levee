@@ -9,6 +9,7 @@
     "replay": "node examples/replay.js",
     "import:uniswap": "node examples/import-uniswap.js",
     "verify:deployment": "node scripts/verify-deployment.js",
+    "agent:demo": "node agent/demo.js",
     "test": "node --test"
   },
   "engines": {
