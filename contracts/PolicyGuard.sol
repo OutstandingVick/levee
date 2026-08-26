@@ -11,10 +11,12 @@ contract PolicyGuard is Owned {
     uint64 public mandateVersion;
     mapping(address asset => bool approved) public approvedAssets;
     mapping(address target => bool approved) public approvedTargets;
+    mapping(address target => mapping(bytes4 selector => bool approved)) public approvedSelectors;
 
     event MandateUpdated(uint64 indexed version, MandateTypes.Mandate mandate);
     event AssetApprovalChanged(address indexed asset, bool approved);
     event TargetApprovalChanged(address indexed target, bool approved);
+    event SelectorApprovalChanged(address indexed target, bytes4 indexed selector, bool approved);
 
     constructor(address initialOwner, MandateTypes.Mandate memory initialMandate)
         Owned(initialOwner)
@@ -36,6 +38,15 @@ contract PolicyGuard is Owned {
         if (target == address(0)) revert ZeroAddress();
         approvedTargets[target] = approved;
         emit TargetApprovalChanged(target, approved);
+    }
+
+    function setSelectorApproval(address target, bytes4 selector, bool approved)
+        external
+        onlyOwner
+    {
+        if (target == address(0)) revert ZeroAddress();
+        approvedSelectors[target][selector] = approved;
+        emit SelectorApprovalChanged(target, selector, approved);
     }
 
     function _setMandate(MandateTypes.Mandate memory nextMandate) internal {
