@@ -37,6 +37,7 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         uint256 amount,
         uint256 projectedStressLossBps
     );
+    event EmergencyWithdrawal(address indexed token, uint256 amount, address indexed recipient);
 
     constructor(address initialOwner, PolicyGuard guard) Owned(initialOwner) {
         if (address(guard) == address(0)) revert ZeroAddress();
@@ -129,5 +130,13 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         totalDeposited[token] = totalDeposited[token] > amount ? totalDeposited[token] - amount : 0;
         token.safeTransfer(recipient, amount);
         emit Withdrawn(token, amount, recipient);
+    }
+
+    function emergencyWithdraw(address token, address recipient) external onlyOwner nonReentrant {
+        if (recipient == address(0)) revert ZeroAddress();
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        totalDeposited[token] = 0;
+        token.safeTransfer(recipient, amount);
+        emit EmergencyWithdrawal(token, amount, recipient);
     }
 }
