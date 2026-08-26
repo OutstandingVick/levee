@@ -15,6 +15,9 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
     error ZeroAmount();
     error ReserveFloorBreached();
     error NotAgent();
+    error InvalidCallData();
+    error ExternalCallFailed(bytes reason);
+    error OverspentToken();
 
     PolicyGuard public immutable policyGuard;
     address public agent;
@@ -23,6 +26,14 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
     event Deposited(address indexed token, uint256 amount);
     event Withdrawn(address indexed token, uint256 amount, address indexed recipient);
     event AgentChanged(address indexed previousAgent, address indexed newAgent);
+    event ActionExecuted(
+        address indexed agent,
+        address indexed target,
+        address indexed asset,
+        bytes4 selector,
+        uint256 amount,
+        uint256 projectedStressLossBps
+    );
 
     constructor(address initialOwner, PolicyGuard guard) Owned(initialOwner) {
         if (address(guard) == address(0)) revert ZeroAddress();
@@ -44,6 +55,45 @@ contract MandateVault is Owned, Pausable, ReentrancyGuard {
         token.safeTransferFrom(msg.sender, address(this), amount);
         totalDeposited[token] += amount;
         emit Deposited(token, amount);
+    }
+
+    function execute(
+        address asset,
+        address target,
+        uint256 amount,
+        uint256 projectedStressLossBps,
+        bytes calldata data
+    ) external onlyAgent whenNotPaused nonReentrant returns (bytes memory result) {
+        if (amount == 0) revert ZeroAmount();
+        if (data.length < 4) revert InvalidCallData();
+        bytes4 selector = bytes4(data[:4]);
+        MandateTypes.Mandate memory current = policyGuard.currentMandate();
+        uint256 balanceBefore = IERC20(asset).balanceOf(address(this));
+        uint256 reserveAfter = IERC20(current.reserveToken).balanceOf(address(this));
+        if (asset == current.reserveToken) reserveAfter = balanceBefore - amount;
+
+        policyGuard.validateAction(
+            MandateTypes.Action({
+                asset: asset,
+                target: target,
+                selector: selector,
+                amount: amount,
+                totalManagedAssets: totalDeposited[asset],
+                reserveBalanceAfter: reserveAfter,
+                projectedStressLossBps: projectedStressLossBps
+            })
+        );
+
+        asset.forceApprove(target, amount);
+        (bool success, bytes memory returnData) = target.call(data);
+        asset.forceApprove(target, 0);
+        if (!success) revert ExternalCallFailed(returnData);
+        uint256 balanceAfter = IERC20(asset).balanceOf(address(this));
+        if (balanceBefore > balanceAfter && balanceBefore - balanceAfter > amount) {
+            revert OverspentToken();
+        }
+        emit ActionExecuted(msg.sender, target, asset, selector, amount, projectedStressLossBps);
+        return returnData;
     }
 
     function withdraw(address token, uint256 amount, address recipient)
